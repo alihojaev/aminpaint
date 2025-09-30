@@ -58,18 +58,22 @@ def _get_pipeline():
         return _PIPELINE
 
     model_path = os.environ.get("MODEL_PATH", "/models/AnimeMangaInpainting")
+    model_id = os.environ.get("MODEL_ID", "dreMaz/AnimeMangaInpainting")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
 
+    # Если локальная папка с моделью существует — используем её, иначе скачиваем с HF по ID
+    source = model_path if os.path.isdir(model_path) else model_id
+
     try:
         pipe = AutoPipelineForInpainting.from_pretrained(
-            model_path,
+            source,
             torch_dtype=torch_dtype
         )
         pipe = pipe.to(device)
     except Exception as exc:
-        raise RuntimeError(f"Failed to load pipeline from {model_path}: {exc}")
+        raise RuntimeError(f"Failed to load pipeline from {source}: {exc}")
 
     _PIPELINE = pipe
     return _PIPELINE

@@ -19,16 +19,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
-# Pre-download model to speed up cold starts
-RUN python - <<'PY'
-from huggingface_hub import snapshot_download
-snapshot_download(
-    repo_id="dreMaz/AnimeMangaInpainting",
-    local_dir="/models/AnimeMangaInpainting",
-    local_dir_use_symlinks=False
-)
-print("Model downloaded to /models/AnimeMangaInpainting")
-PY
+# Note: модель будет загружаться лениво при первом запросе (во время рантайма)
 
 # Add application code
 COPY server.py /app/server.py
