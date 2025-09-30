@@ -1,0 +1,12 @@
+torch
+torchvision
+diffusers
+transformers
+accelerate
+pillow
+opencv-python
+fastapi
+uvicorn
+huggingface-hub
+
+
