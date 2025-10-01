@@ -24,11 +24,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Клонируем LaMa (saicinpainting) и ставим её зависимости
 ENV WORKSPACE=/workspace
-RUN git clone https://github.com/advimman/lama.git ${WORKSPACE}/lama && \
-    pip install --no-cache-dir -r ${WORKSPACE}/lama/requirements.txt || true
-    
-# Установка минимальных/совместимых пакетов для инференса (поверх, на случай несовместимостей)
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN mkdir -p ${WORKSPACE} && \
+    git clone https://github.com/advimman/lama.git ${WORKSPACE}/lama
 
 # Best-effort: скачиваем Big-Lama веса (не фейлим билд, если сеть недоступна)
 RUN mkdir -p ${WORKSPACE}/lama && \
@@ -36,7 +33,7 @@ RUN mkdir -p ${WORKSPACE}/lama && \
      && unzip -q ${WORKSPACE}/lama/big-lama.zip -d ${WORKSPACE}/lama/ \
      && rm -f ${WORKSPACE}/lama/big-lama.zip) || true
 
-ENV PYTHONPATH=${WORKSPACE}/lama:${PYTHONPATH}
+ENV PYTHONPATH=/workspace/lama
 
 # Add application code
 COPY server.py /app/server.py
