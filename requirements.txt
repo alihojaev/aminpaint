@@ -3,11 +3,24 @@ torchvision
 numpy==1.26.4
 pillow
 opencv-python
-tqdm
+# Core utils
 pyyaml
 omegaconf>=2.2,<2.4
 hydra-core>=1.2,<1.4
 kornia>=0.6
+# LaMa extras used by bin/predict.py and evaluation utils
+scikit-image
+scikit-learn
+lpips
+torch-fidelity
+pandas
+scipy
+timm
+webdataset
+imgaug
+easydict
+# misc
+tqdm
 runpod
 
 
