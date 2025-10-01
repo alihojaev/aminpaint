@@ -23,10 +23,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Add application code
 COPY server.py /app/server.py
+COPY rp_handler.py /app/rp_handler.py
 COPY runpod.yaml /app/runpod.yaml
 
-EXPOSE 8000
-
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Для serverless воркера uvicorn не нужен, стартуем runpod handler
+CMD ["python", "-u", "rp_handler.py"]
 
 
