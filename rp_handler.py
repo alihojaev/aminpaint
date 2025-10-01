@@ -6,10 +6,10 @@ from typing import Optional, Dict, Any
 import runpod
 from PIL import Image
 import torch
-from diffusers import AutoPipelineForInpainting
-
-
-_PIPELINE = None
+import shutil
+import subprocess
+import uuid
+from pathlib import Path
 
 
 def _decode_base64_image(b64_string: str) -> Image.Image:
@@ -83,41 +83,60 @@ def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         num_inference_steps: int = int(inputs.get("num_inference_steps", 30))
         seed = inputs.get("seed")
 
-        image = _decode_base64_image(image_b64)
+        workspace = Path("/workspace")
+        lama_dir = workspace / "lama"
+        model_dir = lama_dir / "big-lama"
+        req_id = uuid.uuid4().hex[:12]
+        input_root = workspace / "input" / req_id
+        output_root = workspace / "output" / req_id
+        input_root.mkdir(parents=True, exist_ok=True)
+        output_root.mkdir(parents=True, exist_ok=True)
+
+        image = _decode_base64_image(image_b64).convert("RGB")
         mask = _decode_base64_mask(mask_b64, target_size=image.size)
+        mask = mask.point(lambda x: 255 if x > 0 else 0)
 
-        pipe = _get_pipeline()
+        image_path = input_root / "image.png"
+        mask_path = input_root / "image_mask.png"
+        image.save(image_path)
+        mask.save(mask_path)
 
-        generator = None
-        if seed is not None:
-            try:
-                generator = torch.Generator(device=pipe.device).manual_seed(int(seed))
-            except Exception:
-                generator = None
+        if not lama_dir.exists():
+            return {"error": "LaMa code not found at /workspace/lama"}
+        if not model_dir.exists():
+            return {"error": "Big-Lama weights not found at /workspace/lama/big-lama"}
 
-        device_type = pipe.device.type if isinstance(pipe.device, torch.device) else str(pipe.device)
+        cmd = [
+            "python3",
+            "bin/predict.py",
+            f"model.path={model_dir}",
+            f"indir={input_root}",
+            f"outdir={output_root}",
+        ]
+        try:
+            completed = subprocess.run(
+                cmd,
+                cwd=str(lama_dir),
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except subprocess.CalledProcessError as e:
+            return {"error": f"LaMa failed: {e.stderr.decode(errors='ignore')[:1000]}"}
 
-        if device_type == "cuda":
-            with torch.autocast("cuda"):
-                result = pipe(
-                    prompt=prompt,
-                    image=image,
-                    mask_image=mask,
-                    guidance_scale=guidance_scale,
-                    num_inference_steps=num_inference_steps,
-                    generator=generator,
-                ).images[0]
-        else:
-            result = pipe(
-                prompt=prompt,
-                image=image,
-                mask_image=mask,
-                guidance_scale=guidance_scale,
-                num_inference_steps=num_inference_steps,
-                generator=generator,
-            ).images[0]
+        result_path = None
+        for p in output_root.rglob("*.png"):
+            result_path = p
+            break
+        if not result_path:
+            return {"error": "Result not found"}
 
-        return {"result": _encode_image_to_base64(result)}
+        with open(result_path, "rb") as f:
+            res_b64 = base64.b64encode(f.read()).decode()
+
+        shutil.rmtree(input_root, ignore_errors=True)
+        shutil.rmtree(output_root, ignore_errors=True)
+        return {"result": res_b64}
     except Exception as exc:
         return {"error": str(exc)}
 

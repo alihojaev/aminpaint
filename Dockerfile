@@ -4,6 +4,8 @@ FROM python:3.10-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
+        curl \
+        unzip \
         ca-certificates \
         libgl1 \
         libglib2.0-0 && \
@@ -20,30 +22,18 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
-# Best-effort: предзагрузим модели в образ (не фейлим билд при отсутствии сети)
-RUN mkdir -p /models && python - <<'PY' || true
-print("Preloading models (best-effort)...")
-try:
-    from huggingface_hub import snapshot_download
-    snapshot_download(
-        repo_id="dreMaz/AnimeMangaInpainting",
-        local_dir="/models/AnimeMangaInpainting",
-        local_dir_use_symlinks=False
-    )
-    print("Cached dreMaz/AnimeMangaInpainting -> /models/AnimeMangaInpainting")
-except Exception as e:
-    print("WARN: could not cache AnimeMangaInpainting:", e)
-try:
-    from huggingface_hub import snapshot_download
-    snapshot_download(
-        repo_id="runwayml/stable-diffusion-inpainting",
-        local_dir="/models/sd-inpainting",
-        local_dir_use_symlinks=False
-    )
-    print("Cached runwayml/stable-diffusion-inpainting -> /models/sd-inpainting")
-except Exception as e:
-    print("WARN: could not cache sd-inpainting:", e)
-PY
+# Клонируем LaMa (saicinpainting) и ставим её зависимости
+ENV WORKSPACE=/workspace
+RUN git clone https://github.com/advimman/lama.git ${WORKSPACE}/lama && \
+    pip install --no-cache-dir -r ${WORKSPACE}/lama/requirements.txt || true
+
+# Best-effort: скачиваем Big-Lama веса (не фейлим билд, если сеть недоступна)
+RUN mkdir -p ${WORKSPACE}/lama && \
+    (curl -L "https://huggingface.co/smartywu/big-lama/resolve/main/big-lama.zip" -o ${WORKSPACE}/lama/big-lama.zip \
+     && unzip -q ${WORKSPACE}/lama/big-lama.zip -d ${WORKSPACE}/lama/ \
+     && rm -f ${WORKSPACE}/lama/big-lama.zip) || true
+
+ENV PYTHONPATH=${WORKSPACE}/lama:${PYTHONPATH}
 
 # Add application code
 COPY server.py /app/server.py
