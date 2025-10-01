@@ -42,13 +42,17 @@ def _get_pipeline():
 
     model_path = os.environ.get("MODEL_PATH", "/models/AnimeMangaInpainting")
     model_id = os.environ.get("MODEL_ID", "dreMaz/AnimeMangaInpainting")
+    fallback_model_id = os.environ.get("FALLBACK_MODEL_ID", "runwayml/stable-diffusion-inpainting")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
 
     source = model_path if os.path.isdir(model_path) else model_id
-    pipe = AutoPipelineForInpainting.from_pretrained(source, torch_dtype=torch_dtype)
-    pipe = pipe.to(device)
+    try:
+        pipe = AutoPipelineForInpainting.from_pretrained(source, torch_dtype=torch_dtype)
+        pipe = pipe.to(device)
+    except Exception:
+        pipe = AutoPipelineForInpainting.from_pretrained(fallback_model_id, torch_dtype=torch_dtype).to(device)
     _PIPELINE = pipe
     return _PIPELINE
 
