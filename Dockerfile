@@ -4,6 +4,7 @@ FROM python:3.10-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
+        ca-certificates \
         libgl1 \
         libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
@@ -19,7 +20,30 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
-# Note: модель будет загружаться лениво при первом запросе (во время рантайма)
+# Best-effort: предзагрузим модели в образ (не фейлим билд при отсутствии сети)
+RUN mkdir -p /models && python - <<'PY' || true
+print("Preloading models (best-effort)...")
+try:
+    from huggingface_hub import snapshot_download
+    snapshot_download(
+        repo_id="dreMaz/AnimeMangaInpainting",
+        local_dir="/models/AnimeMangaInpainting",
+        local_dir_use_symlinks=False
+    )
+    print("Cached dreMaz/AnimeMangaInpainting -> /models/AnimeMangaInpainting")
+except Exception as e:
+    print("WARN: could not cache AnimeMangaInpainting:", e)
+try:
+    from huggingface_hub import snapshot_download
+    snapshot_download(
+        repo_id="runwayml/stable-diffusion-inpainting",
+        local_dir="/models/sd-inpainting",
+        local_dir_use_symlinks=False
+    )
+    print("Cached runwayml/stable-diffusion-inpainting -> /models/sd-inpainting")
+except Exception as e:
+    print("WARN: could not cache sd-inpainting:", e)
+PY
 
 # Add application code
 COPY server.py /app/server.py

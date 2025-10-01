@@ -60,12 +60,18 @@ def _get_pipeline():
     model_path = os.environ.get("MODEL_PATH", "/models/AnimeMangaInpainting")
     model_id = os.environ.get("MODEL_ID", "dreMaz/AnimeMangaInpainting")
     fallback_model_id = os.environ.get("FALLBACK_MODEL_ID", "runwayml/stable-diffusion-inpainting")
+    fallback_local_path = os.environ.get("FALLBACK_LOCAL_PATH", "/models/sd-inpainting")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
 
     # Если локальная папка с моделью существует — используем её, иначе скачиваем с HF по ID
-    source = model_path if os.path.isdir(model_path) else model_id
+    if os.path.isdir(model_path):
+        source = model_path
+    elif os.path.isdir(fallback_local_path):
+        source = fallback_local_path
+    else:
+        source = model_id
 
     try:
         pipe = AutoPipelineForInpainting.from_pretrained(
@@ -74,9 +80,9 @@ def _get_pipeline():
         )
         pipe = pipe.to(device)
     except Exception:
-        # Фолбэк на стабильный диффузор инпейнтинг, если репозиторий не формата diffusers
+        alt = fallback_local_path if os.path.isdir(fallback_local_path) else fallback_model_id
         pipe = AutoPipelineForInpainting.from_pretrained(
-            fallback_model_id,
+            alt,
             torch_dtype=torch_dtype
         ).to(device)
 
