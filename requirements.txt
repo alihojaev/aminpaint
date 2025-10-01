@@ -1,19 +1,13 @@
 torch
 torchvision
+numpy==1.26.4
 pillow
 opencv-python
-numpy
 tqdm
 pyyaml
-easydict==1.9.0
-scikit-image==0.17.2
-scikit-learn==0.24.2
-albumentations==0.5.2
-hydra-core==1.1.0
-pytorch-lightning==1.2.9
-kornia==0.5.0
-tabulate
-packaging
+omegaconf>=2.2,<2.4
+hydra-core>=1.2,<1.4
+kornia>=0.6
 runpod
 
 

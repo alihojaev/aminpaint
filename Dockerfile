@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 ENV WORKSPACE=/workspace
 RUN git clone https://github.com/advimman/lama.git ${WORKSPACE}/lama && \
     pip install --no-cache-dir -r ${WORKSPACE}/lama/requirements.txt || true
+    
+# Установка минимальных/совместимых пакетов для инференса (поверх, на случай несовместимостей)
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Best-effort: скачиваем Big-Lama веса (не фейлим билд, если сеть недоступна)
 RUN mkdir -p ${WORKSPACE}/lama && \
