@@ -19,6 +19,8 @@ timm
 webdataset
 imgaug
 easydict
+# Needed by LaMa (saicinpainting/utils.py imports pytorch_lightning)
+pytorch-lightning
 # misc
 tqdm
 runpod
