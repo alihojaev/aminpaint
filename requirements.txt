@@ -1,5 +1,5 @@
-torch
-torchvision
+torch==2.5.1
+torchvision==0.20.1
 numpy==1.26.4
 pillow
 opencv-python
@@ -8,7 +8,8 @@ pyyaml
 omegaconf>=2.2,<2.4
 hydra-core>=1.2,<1.4
 kornia>=0.6
-albumentations>=1.3
+# LaMa совместима со старыми IAA-трансформами → нужна версия <1.3
+albumentations==1.2.1
 # LaMa extras used by bin/predict.py and evaluation utils
 scikit-image
 scikit-learn
